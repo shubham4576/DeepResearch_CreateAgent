@@ -6,6 +6,7 @@ from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 from enum import StrEnum
+from functools import lru_cache
 
 
 class SearchProvider(StrEnum):
@@ -36,5 +37,10 @@ class Config(BaseSettings):
     PROMPT_PATH: Path = BASE_PATH / "prompts"
 
 
-# Singleton — instantiated ONCE, imported everywhere
-config = Config()
+@lru_cache
+def get_config() -> Config:
+    return Config()  # type: ignore
+
+
+# Load once at startup from environment variables.
+config = get_config()  # pyright: ignore[reportCallIssue]
