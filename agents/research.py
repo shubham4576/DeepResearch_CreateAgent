@@ -15,6 +15,8 @@ scraper = get_scraper()
 
 def execute_tasks(tasks: str) -> ResearchResponse:
 
+    urls = search_provider
+
     system_prompt = load_prompt("research")
     prompt = ChatPromptTemplate.from_messages(
         [

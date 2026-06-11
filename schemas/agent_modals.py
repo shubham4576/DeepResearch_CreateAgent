@@ -32,12 +32,6 @@ class ReflectionResponse(BaseModel):
     missing_topics: list[str]
 
 
-class SearchResult(BaseModel):
-    title: str
-    url: str
-    snippet: str
-
-
 class ScrapedContent(BaseModel):
     url: str
     content: str

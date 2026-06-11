@@ -1,4 +1,5 @@
 from .agent_modals import *
+from .retrieval_modals import *
 
 __all__ = [
     "Plan",
@@ -7,4 +8,5 @@ __all__ = [
     "ReflectionResponse",
     "SearchResult",
     "ScrapedContent",
+    "SourceDocument",
 ]
