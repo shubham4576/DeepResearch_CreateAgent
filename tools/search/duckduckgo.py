@@ -1,0 +1,19 @@
+from duckduckgo_search import DDGS
+
+from schemas import SearchResult
+from .base import BaseSearchProvider
+
+
+class DuckDuckGoSearchProvider(BaseSearchProvider):
+
+    def search(self, query: str, max_results: int) -> list[SearchResult]:
+
+        results = DDGS().text(
+            query,
+            max_results=max_results,
+        )
+
+        return [
+            SearchResult(title=r["title"], url=r["href"], snippet=r["body"])
+            for r in results
+        ]

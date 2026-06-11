@@ -1,0 +1,52 @@
+.
+├── agents
+│   ├── __init__.py
+│   ├── planner.py
+│   ├── reflection.py
+│   └── research.py
+├── api
+│   └── __init__.py
+├── config.py
+├── .env
+├── .gitignore
+├── graph
+│   └── __init__.py
+├── .idea
+│   ├── Deep_Research_POC.iml
+│   ├── .gitignore
+│   ├── inspectionProfiles
+│   │   └── profiles_settings.xml
+│   ├── misc.xml
+│   ├── modules.xml
+│   ├── vcs.xml
+│   └── workspace.xml
+├── llms
+│   ├── __init__.py
+│   └── openai_llms.py
+├── main.py
+├── memory
+│   └── __init__.py
+├── modals
+│   ├── agent_modals.py
+│   └── __init__.py
+├── output
+│   └── __init__.py
+├── project_tree.txt
+├── prompts
+│   ├── __init__.py
+│   ├── loader.py
+│   ├── planner
+│   │   └── current.md
+│   └── research
+│       └── current.md
+├── pyproject.toml
+├── README.md
+├── state
+│   └── __init__.py
+├── tests
+│   └── __init__.py
+├── tools
+│   └── __init__.py
+└── uv.lock
+
+16 directories, 34 files

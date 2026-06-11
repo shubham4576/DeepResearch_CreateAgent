@@ -1,0 +1,9 @@
+/.idea/Deep_Research_POC.iml
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/inspectionProfiles/profiles_settings.xml
+/.idea/vcs.xml
+/.idea/workspace.xml
+.env
+/.venv/
+/.python-version
