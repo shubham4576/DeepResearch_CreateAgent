@@ -24,6 +24,7 @@ class ResearchResponse(BaseModel):
     task: str
     summary: str
     findings: list[ResearchFinding]
+    sources: list[str]
 
 
 class ReflectionResponse(BaseModel):

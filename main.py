@@ -1,37 +1,69 @@
+from tqdm import tqdm
+
+from agents import create_plan, ResearchAgent
 from tools import RetrievalService, get_search_provider, get_scraper
 
 
 def main():
+
+    query = (
+        "Research Apache Kafka architecture, "
+        "workflow, scalability, and comparison "
+        "with RabbitMQ."
+    )
+
+    print("\nCreating research plan...\n")
+
+    tasks = create_plan(query)
+
+    print(f"Generated {len(tasks)} tasks:\n")
+
+    for idx, task in enumerate(tasks, start=1):
+        print(f"{idx}. {task}")
 
     retrieval_service = RetrievalService(
         search_provider=get_search_provider(),
         scraper=get_scraper(),
     )
 
-    query = "Research Apache Kafka architecture, workflow, scalability, and comparison with RabbitMQ."
-
-    documents = retrieval_service.retrieve(
-        query=query,
-        max_results=5,
+    research_agent = ResearchAgent(
+        retrieval_service=retrieval_service,
     )
 
-    print(f"\nRetrieved {len(documents)} documents\n")
+    results = []
 
-    for idx, document in enumerate(documents, start=1):
+    print("\nStarting research...\n")
 
-        print("=" * 80)
-        print(f"DOCUMENT {idx}")
-        print("=" * 80)
+    with tqdm(
+        total=len(tasks),
+        desc="Research Progress",
+        unit="task",
+    ) as progress:
 
-        print(f"TITLE: {document.title}")
-        print(f"URL: {document.url}")
+        for task in tasks:
 
-        preview = document.content[:1000]
+            progress.set_postfix(current_task=task[:50])
 
-        print("\nCONTENT PREVIEW:\n")
-        print(preview)
+            result = research_agent.execute(task)
 
-        print("\n")
+            results.append(result)
+
+            progress.update(1)
+
+    print("\nResearch completed.\n")
+
+    print("=" * 100)
+    print("RESEARCH RESULTS")
+    print("=" * 100)
+
+    for idx, result in enumerate(results, start=1):
+
+        print(f"\nTask {idx}")
+        print("-" * 100)
+
+        print(result.model_dump_json(indent=2))
+
+    return results
 
 
 if __name__ == "__main__":

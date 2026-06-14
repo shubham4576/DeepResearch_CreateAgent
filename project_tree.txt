@@ -12,22 +12,21 @@
 ├── graph
 │   └── __init__.py
 ├── .idea
-│   ├── Deep_Research_POC.iml
+│   ├── deep-research-poc.iml
 │   ├── .gitignore
 │   ├── inspectionProfiles
 │   │   └── profiles_settings.xml
 │   ├── misc.xml
 │   ├── modules.xml
+│   ├── pyProjectModel.xml
 │   ├── vcs.xml
 │   └── workspace.xml
+├── LICENSE
 ├── llms
 │   ├── __init__.py
 │   └── openai_llms.py
 ├── main.py
 ├── memory
-│   └── __init__.py
-├── modals
-│   ├── agent_modals.py
 │   └── __init__.py
 ├── output
 │   └── __init__.py
@@ -40,13 +39,36 @@
 │   └── research
 │       └── current.md
 ├── pyproject.toml
+├── .pytest_cache
+│   ├── CACHEDIR.TAG
+│   ├── .gitignore
+│   ├── README.md
+│   └── v
+│       └── cache
+│           ├── lastfailed
+│           └── nodeids
 ├── README.md
+├── schemas
+│   ├── agent_modals.py
+│   ├── __init__.py
+│   └── retrieval_modals.py
 ├── state
 │   └── __init__.py
 ├── tests
-│   └── __init__.py
+│   └── test_retrieval.py
 ├── tools
-│   └── __init__.py
+│   ├── __init__.py
+│   ├── retrieval
+│   │   ├── __init__.py
+│   │   └── service.py
+│   ├── scrape
+│   │   ├── base.py
+│   │   ├── __init__.py
+│   │   └── trafilatura_scrapper.py
+│   └── search
+│       ├── base.py
+│       ├── duckduckgo.py
+│       └── __init__.py
 └── uv.lock
 
-16 directories, 34 files
+22 directories, 50 files
