@@ -14,6 +14,12 @@ class DuckDuckGoSearchProvider(BaseSearchProvider):
         )
 
         return [
-            SearchResult(title=r["title"], url=r["href"], snippet=r["body"])
-            for r in results
+            SearchResult(
+                title=r["title"],
+                url=r["href"],
+                snippet=r["body"],
+                rank=index,
+                provider="duckduckgo",
+            )
+            for index, r in enumerate(results, start=1)
         ]

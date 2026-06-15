@@ -14,9 +14,17 @@ Instructions:
 - Each task should contain enough detail for a researcher to understand what information to gather.
 - The final set of tasks should enable creation of a comprehensive research report.
 
-Output Requirements:
+Structured Output Requirements:
 
-- Return only the research tasks.
-- Number tasks sequentially.
-- Each task must be a single, self-contained instruction.
-- Do not include explanations, reasoning, introductions, or conclusions.
+- Return a structured plan with a `tasks` array.
+- Each task must include:
+  - `id`: stable identifier such as `task_001`.
+  - `question`: the concrete research question.
+  - `objective`: why this task matters for the final report.
+  - `expected_output`: what facts, evidence, comparisons, or analysis should be returned.
+  - `priority`: integer from 1 to 5 where 1 is highest priority.
+  - `dependencies`: task ids that must be completed first, or an empty list.
+  - `search_queries`: 2 to 4 precise web search queries for the research agent.
+  - `status`: `pending`.
+- Prefer independent tasks with empty dependencies unless a dependency is genuinely required.
+- Do not include explanations, reasoning, introductions, or conclusions outside the structured output.

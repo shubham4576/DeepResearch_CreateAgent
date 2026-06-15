@@ -1,86 +1,130 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import cast
-
-from tqdm import tqdm
-
-from agents import create_plan, ResearchAgent
+from agents import (
+    CritiqueAgent,
+    ReflectionAgent,
+    RefinementAgent,
+    ReportGenerationAgent,
+    ResearchAgent,
+    SynthesisAgent,
+    TaskDistributionAgent,
+    create_plan,
+)
 from config import config
-from tools import RetrievalService, get_search_provider, get_scraper
-
-output_file = config.BASE_PATH / "output" / "research_plan.txt"
+from schemas import RefinementResponse, ReportResponse, ResearchTask
+from tools import RetrievalService, get_scraper, get_search_provider
 
 MAX_TASKS = 2
+MAX_RESEARCH_WORKERS = 4
 
 
-def main():
-
-    query = (
-        "Tell me which coffee beans should we use to make best cold"
-        "coffee. I live in India."
-    )
-
-    print("\nCreating research plan...\n")
-
-    tasks = create_plan(query).tasks
-    if MAX_TASKS is not None:
-        tasks = tasks[:MAX_TASKS]
-
-    print(f"Generated {len(tasks)} tasks:\n")
-
-    for idx, task in enumerate(tasks, start=1):
-        print(f"{idx}. {task}")
-
-    retrieval_service = RetrievalService(
+def _build_retrieval_service() -> RetrievalService:
+    return RetrievalService(
         search_provider=get_search_provider(),
         scraper=get_scraper(),
     )
 
-    research_agent = ResearchAgent(
-        retrieval_service=retrieval_service,
+
+def _print_tasks(tasks: list[ResearchTask]) -> None:
+    print(f"Generated {len(tasks)} tasks:\n")
+
+    for index, task in enumerate(tasks, start=1):
+        print(f"{index}. [{task.id}] {task.question}")
+        print(f"   Objective: {task.objective}")
+        print(f"   Searches: {', '.join(task.search_queries)}")
+
+
+def run_research_pipeline(query: str) -> RefinementResponse:
+    print("\nCreating research plan...\n")
+    plan = create_plan(query)
+    tasks = plan.tasks
+
+    if MAX_TASKS is not None:
+        tasks = tasks[:MAX_TASKS]
+
+    _print_tasks(tasks)
+
+    retrieval_service = _build_retrieval_service()
+    research_agent = ResearchAgent(retrieval_service=retrieval_service)
+    distributor = TaskDistributionAgent(
+        research_agent=research_agent,
+        max_workers=MAX_RESEARCH_WORKERS,
     )
 
-    results = []
+    print("\nStarting parallel research...\n")
+    research_results = distributor.execute(tasks)
 
-    print("\nStarting research...\n")
+    print("\nReflecting on research quality...\n")
+    reflection_agent = ReflectionAgent()
+    reflections = [
+        reflection_agent.execute(task=task, research_result=result)
+        for task, result in zip(tasks, research_results, strict=False)
+    ]
 
-    with tqdm(
-        total=len(tasks),
-        desc="Research Progress",
-        unit="task",
-    ) as progress:
-        max_workers = max(1, min(4, len(tasks)))
-        results_by_index = [None] * len(tasks)
+    follow_up_tasks = [
+        follow_up_task
+        for reflection in reflections
+        if not reflection.is_complete
+        for follow_up_task in reflection.follow_up_tasks
+    ]
 
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_index = {
-                executor.submit(research_agent.execute, task): index
-                for index, task in enumerate(tasks)
-            }
+    if follow_up_tasks:
+        print(f"\nRunning {len(follow_up_tasks)} follow-up research tasks...\n")
+        follow_up_results = distributor.execute(follow_up_tasks)
+        research_results.extend(follow_up_results)
 
-            for future in as_completed(future_to_index):
-                index = future_to_index[future]
-                current_task = tasks[index]
-                progress.set_postfix(current_task=current_task[:50])
+        reflections.extend(
+            reflection_agent.execute(task=task, research_result=result)
+            for task, result in zip(follow_up_tasks, follow_up_results, strict=False)
+        )
 
-                try:
-                    results_by_index[index] = future.result()
-                except Exception as error:
-                    progress.set_postfix(current_task=f"{current_task[:50]} (failed)")
-                    print(f"\nTask {index + 1} failed: {error}")
-                finally:
-                    progress.update(1)
+    print("\nSynthesizing evidence...\n")
+    synthesis = SynthesisAgent().execute(
+        query=query,
+        research_results=research_results,
+        reflections=reflections,
+    )
 
-        results = [
-            cast(dict, cast(object, result))["structured_response"]
-            for result in results_by_index
-            if result is not None
-        ]
+    print("\nGenerating draft report...\n")
+    draft_report = ReportGenerationAgent().execute(query=query, synthesis=synthesis)
 
-        # return results
+    print("\nCritiquing draft report...\n")
+    critique = CritiqueAgent().execute(
+        query=query,
+        synthesis=synthesis,
+        draft_report=draft_report,
+    )
 
-    return results
+    print("\nRefining final report...\n")
+    if critique.requires_revision:
+        refinement = RefinementAgent().execute(
+            query=query,
+            synthesis=synthesis,
+            draft_report=draft_report,
+            critique=critique,
+        )
+    else:
+        refinement = RefinementResponse(
+            final_report=draft_report,
+            changes_made=["Critique did not require revision."],
+        )
+
+    return refinement
+
+
+def main() -> ReportResponse:
+    query = (
+        "Tell me which coffee beans should we use to make best cold "
+        "coffee. I live in India."
+    )
+
+    refinement = run_research_pipeline(query)
+
+    output_file = config.BASE_PATH / "output" / "research_report.txt"
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    output_file.write_text(refinement.final_report.markdown, encoding="utf-8")
+
+    return refinement.final_report
 
 
 if __name__ == "__main__":
-    response = main()
-    print(response[0])
+    report = main()
+    print(report.markdown)

@@ -75,6 +75,7 @@ class ResearchResponse(BaseModel):
     sources: list[Citation] = Field(default_factory=list)
     insufficient_evidence: bool = False
     gaps: list[str] = Field(default_factory=list)
+    error: str | None = None
 
 
 class ReflectionResponse(BaseModel):

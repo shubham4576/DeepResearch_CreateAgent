@@ -4,9 +4,32 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from llms import make_llm
 from prompts import load_prompt
-from schemas import Plan
+from schemas import Plan, ResearchTask, TaskStatus
 
 planner_llm = make_llm(reasoning={"effort": "xhigh"})
+
+
+def _normalize_plan(plan: Plan) -> Plan:
+    normalized_tasks = []
+
+    for index, task in enumerate(plan.tasks, start=1):
+        task_id = task.id or f"task_{index:03d}"
+        search_queries = task.search_queries or [task.question]
+
+        normalized_tasks.append(
+            ResearchTask(
+                id=task_id,
+                question=task.question,
+                objective=task.objective,
+                expected_output=task.expected_output,
+                priority=task.priority,
+                dependencies=task.dependencies,
+                search_queries=search_queries,
+                status=TaskStatus.PENDING,
+            )
+        )
+
+    return Plan(tasks=normalized_tasks)
 
 
 def create_plan(query: str) -> Plan:
@@ -22,7 +45,7 @@ def create_plan(query: str) -> Plan:
 
     response = cast(Plan, response)
 
-    return response
+    return _normalize_plan(response)
 
 
 if __name__ == "__main__":

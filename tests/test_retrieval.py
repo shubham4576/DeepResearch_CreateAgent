@@ -1,11 +1,34 @@
-from tools import RetrievalService, get_search_provider, get_scraper
+from schemas import ScrapedContent, SearchResult
+from tools import RetrievalService
+from tools.scrape import BaseScraper
+from tools.search import BaseSearchProvider
 
 
-def test_retrieval():
+class FakeSearchProvider(BaseSearchProvider):
+    def search(self, query: str, max_results: int) -> list[SearchResult]:
+        return [
+            SearchResult(
+                title="Kafka Architecture",
+                url="https://example.com/kafka-architecture",
+                snippet="Kafka architecture overview.",
+                rank=1,
+                provider="fake",
+            )
+        ]
 
+
+class FakeScraper(BaseScraper):
+    def scrape(self, url: str) -> ScrapedContent:
+        return ScrapedContent(
+            url=url,
+            content="Kafka uses brokers, topics, partitions, and replication.",
+        )
+
+
+def test_retrieval_preserves_source_metadata():
     service = RetrievalService(
-        search_provider=get_search_provider(),
-        scraper=get_scraper(),
+        search_provider=FakeSearchProvider(),
+        scraper=FakeScraper(),
     )
 
     documents = service.retrieve(
@@ -13,10 +36,14 @@ def test_retrieval():
         max_results=3,
     )
 
-    assert len(documents) > 0
+    assert len(documents) == 1
 
-    for document in documents:
-
-        assert document.title
-        assert document.url
-        assert document.content
+    document = documents[0]
+    assert document.id
+    assert document.title == "Kafka Architecture"
+    assert document.url == "https://example.com/kafka-architecture"
+    assert document.domain == "example.com"
+    assert document.snippet == "Kafka architecture overview."
+    assert document.rank == 1
+    assert document.provider == "fake"
+    assert document.content_length == len(document.content)

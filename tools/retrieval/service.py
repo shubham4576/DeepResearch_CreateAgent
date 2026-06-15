@@ -1,6 +1,8 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import urlparse
+from uuid import uuid5, NAMESPACE_URL
 
-from schemas import SourceDocument
+from schemas import SearchResult, SourceDocument
 from tools.scrape import BaseScraper
 from tools.search import BaseSearchProvider
 
@@ -11,18 +13,25 @@ class RetrievalService:
         self.search_provider = search_provider
         self.scraper = scraper
 
-    def _scrape_document(self, title: str, url: str) -> SourceDocument | None:
+    def _scrape_document(self, result: SearchResult) -> SourceDocument | None:
 
         try:
-            scraped = self.scraper.scrape(url)
+            scraped = self.scraper.scrape(result.url)
 
             if not scraped.content:
                 return None
 
             return SourceDocument(
-                title=title,
-                url=url,
+                id=str(uuid5(NAMESPACE_URL, result.url)),
+                title=result.title,
+                url=result.url,
+                domain=urlparse(result.url).netloc,
+                snippet=result.snippet,
+                rank=result.rank,
+                provider=result.provider,
                 content=scraped.content,
+                content_length=len(scraped.content),
+                fetched_at=scraped.fetched_at,
             )
         except Exception:
             return None
@@ -37,8 +46,7 @@ class RetrievalService:
             futures = [
                 executor.submit(
                     self._scrape_document,
-                    result.title,
-                    result.url,
+                    result,
                 )
                 for result in search_results
             ]

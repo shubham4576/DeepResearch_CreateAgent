@@ -1,156 +1,197 @@
-# DeepResearch POC
+# DeepResearch CreateAgent
 
-A multi-agent deep research system powered by LangChain and LangGraph. Users enter a query and the system autonomously searches the web, crawls relevant pages, retrieves from indexed knowledge, and synthesizes a structured, cited summary — similar to how Google and ChatGPT deep research work.
+A production-oriented DeepResearch prototype built around a multi-agent research workflow:
 
----
+```text
+Plan -> Distribute -> Research -> Reflect -> Synthesize -> Generate Report -> Critique -> Refine -> Output
+```
 
-## How It Works
+The current implementation is a CLI pipeline. It plans a user query into structured research tasks, runs task research
+in parallel, validates coverage through reflection, synthesizes the evidence, drafts a report, critiques it, and
+produces a refined Markdown report.
 
-1. User submits a research query
-2. The **Orchestrator Agent** decomposes it into sub-questions
-3. Three specialized agents run **in parallel**:
-   - **Web Search Agent** — queries Tavily / SerpAPI
-   - **Deep Crawl Agent** — scrapes and extracts page content
-   - **Knowledge Agent** — retrieves from a local vector store via RAG
-4. The **Synthesis Agent** deduplicates, ranks, and drafts a final answer
-5. The **Output Formatter** returns a structured Markdown summary with citations
+## Current Capabilities
 
----
+- Structured planning with `ResearchTask` objects instead of plain strings.
+- Parallel research execution through `TaskDistributionAgent`.
+- Web retrieval through DuckDuckGo search and Trafilatura scraping.
+- Source metadata preservation: source ID, URL, domain, snippet, rank, provider, content length, and fetch timestamp.
+- Citation-first research responses with source IDs.
+- Reflection loop that can request follow-up research tasks.
+- Synthesis stage that builds an evidence map before report generation.
+- Separate report, critique, and refinement agents to reduce self-review bias.
+- Deterministic retrieval unit test using fake search/scrape providers.
+
+## Workflow
+
+1. `Planner Agent`
+    - Converts the user query into structured research tasks.
+    - Each task includes an ID, question, objective, expected output, priority, dependencies, and suggested search
+      queries.
+
+2. `Task Distribution Agent`
+    - Runs research tasks concurrently.
+    - Isolates task failures so one failed task does not crash the full research run.
+
+3. `Research Agent`
+    - Runs search queries for each task.
+    - Scrapes relevant pages.
+    - Produces structured findings with citations and source IDs.
+
+4. `Reflection Agent`
+    - Checks whether each task result is complete.
+    - Flags weak sources, contradictions, gaps, and missing topics.
+    - Can create follow-up tasks when evidence is insufficient.
+
+5. `Synthesis Agent`
+    - Merges validated research results into an evidence map.
+    - Deduplicates themes and keeps unresolved conflicts visible.
+
+6. `Report Generation Agent`
+    - Creates the initial Markdown research report from synthesized evidence.
+
+7. `Critique Agent`
+    - Reviews the draft for factual accuracy, citation coverage, completeness, unsupported claims, and logical issues.
+
+8. `Refinement Agent`
+    - Applies critique feedback and produces the final polished report.
 
 ## Project Structure
 
-```
-deepresearch-poc/
-│
-├── main.py                      # Entry point (CLI or FastAPI)
-├── config.py                    # API keys, model names, env config
-├── requirements.txt
-├── .env
-│
+```text
+.
+├── main.py                         # CLI entry point and full pipeline wiring
+├── config.py                       # Environment-backed runtime config
 ├── agents/
-│   ├── orchestrator.py          # Query decomposition + agent coordination
-│   ├── web_search_agent.py      # Web search via Tavily / SerpAPI
-│   ├── deep_crawl_agent.py      # Page scraping + content extraction
-│   ├── knowledge_agent.py       # RAG over indexed documents
-│   └── synthesis_agent.py       # Merges results, drafts final answer
-│
+│   ├── planner.py                  # Query decomposition
+│   ├── distributor.py              # Parallel task execution
+│   ├── research.py                 # Retrieval-backed research worker
+│   ├── reflection.py               # Research quality review
+│   ├── synthesis.py                # Evidence map generation
+│   ├── report.py                   # Draft report generation
+│   ├── critique.py                 # Independent report review
+│   └── refinement.py               # Final report refinement
+├── prompts/
+│   ├── planner/current.md
+│   ├── research/current.md
+│   ├── reflection/current.md
+│   ├── synthesis/current.md
+│   ├── report/current.md
+│   ├── critique/current.md
+│   └── refinement/current.md
+├── schemas/
+│   ├── agent_modals.py             # Agent and report Pydantic schemas
+│   └── retrieval_modals.py         # Search, scrape, and source schemas
 ├── tools/
-│   ├── search_tools.py          # LangChain-wrapped search API tools
-│   ├── scraper_tools.py         # Playwright / BeautifulSoup tools
-│   └── vector_tools.py          # Embedding + vector store retrieval
-│
-├── graph/
-│   └── research_graph.py        # LangGraph StateGraph wiring all agents
-│
-├── state/
-│   └── research_state.py        # Shared TypedDict state across agents
-│
-├── memory/
-│   └── shared_memory.py         # Cross-agent memory (Redis / in-memory)
-│
-├── output/
-│   └── formatter.py             # Markdown output, citations, confidence
-│
-├── api/
-│   ├── router.py                # FastAPI routes (/research, /status)
-│   └── schemas.py               # Pydantic request/response models
-│
-└── tests/
-    ├── test_agents.py
-    ├── test_tools.py
-    └── test_graph.py
+│   ├── search/duckduckgo.py        # DuckDuckGo search provider
+│   ├── scrape/trafilatura_scrapper.py
+│   └── retrieval/service.py        # Search + scrape orchestration
+├── tests/
+│   └── test_retrieval.py
+└── output/
+    └── research_report.txt         # Generated final report
 ```
 
----
+## Core Data Contracts
 
-## Tech Stack
+The pipeline passes structured Pydantic objects between stages:
 
-| Layer | Library |
-|---|---|
-| Agent orchestration | `langgraph`, `langchain` |
-| Web search | `tavily-python` / `serpapi` |
-| Web scraping | `playwright`, `trafilatura` |
-| Vector store | `chromadb` / `qdrant-client` |
-| Embeddings | `langchain-openai` |
-| LLM | `gpt-4o` via OpenAI API |
-| API layer | `fastapi`, `uvicorn` |
-| Observability | `langsmith` |
+- `ResearchTask`
+- `Plan`
+- `SearchResult`
+- `SourceDocument`
+- `Citation`
+- `ResearchFinding`
+- `ResearchResponse`
+- `ReflectionResponse`
+- `SynthesisResponse`
+- `ReportResponse`
+- `CritiqueResponse`
+- `RefinementResponse`
 
----
+This is intentional. DeepResearch quality depends on traceable artifacts, not loose prose passed between agents.
 
-## Getting Started
+## Configuration
 
-### 1. Clone the repo
-
-```bash
-git clone https://github.com/your-org/deepresearch-poc.git
-cd deepresearch-poc
-```
-
-### 2. Install dependencies
-
-```bash
-pip install -r requirements.txt
-playwright install chromium
-```
-
-### 3. Set up environment variables
-
-```bash
-cp .env.example .env
-```
-
-Fill in your `.env`:
+Create a `.env` file in the project root:
 
 ```env
 OPENAI_API_KEY=your_openai_key
-TAVILY_API_KEY=your_tavily_key
-LANGCHAIN_API_KEY=your_langsmith_key
-LANGCHAIN_TRACING_V2=true
+OPENAI_DEFAULT_MODEL=your_model_name
+SEARCH_PROVIDER=duckduckgo
+SCRAPER_PROVIDER=trafilatura
+SEARCH_MAX_RESULTS=10
 ```
 
-### 4. Run the API server
+The current configured providers are:
+
+- Search: `duckduckgo`
+- Scraper: `trafilatura`
+
+## Running
+
+Install dependencies with your preferred project workflow. This repo uses `pyproject.toml` and includes a local virtual
+environment in development.
+
+Run the CLI pipeline:
 
 ```bash
-uvicorn main:app --reload
+.venv/bin/python main.py
 ```
 
-### 5. Make a research request
+The default query is currently hardcoded in `main.py`:
+
+```python
+"""Tell me which coffee beans should we use to make the best cold coffee. I live in India."""
+```
+
+The final Markdown report is written to:
+
+```text
+output/research_report.txt
+```
+
+Development limits are currently set in `main.py`:
+
+```python
+MAX_TASKS = 2
+MAX_RESEARCH_WORKERS = 4
+```
+
+Increase `MAX_TASKS` when you are ready to run deeper research.
+
+## Testing
+
+Run the test suite:
 
 ```bash
-curl -X POST http://localhost:8000/research \
-  -H "Content-Type: application/json" \
-  -d '{"query": "What are the latest advancements in quantum computing in 2025?"}'
+.venv/bin/pytest -q
 ```
 
----
+The retrieval test uses fake providers, so it does not depend on network availability.
 
-## Example Response
+## Current Limitations
 
-```json
-{
-  "query": "What are the latest advancements in quantum computing in 2025?",
-  "summary": "...",
-  "citations": [
-    { "title": "...", "url": "...", "relevance_score": 0.94 }
-  ],
-  "confidence": 0.87,
-  "sources_searched": 12
-}
-```
-
----
+- The orchestration is currently wired in `main.py`, not LangGraph.
+- There is no API server yet.
+- There is no persistent run storage yet.
+- There is no vector-store or document-ingestion pipeline yet.
+- There is no streaming progress API yet.
+- Live execution requires working search/network access and valid OpenAI credentials.
+- The query is currently hardcoded in `main.py`.
 
 ## Roadmap
 
-- [ ] Parallel agent execution via LangGraph fan-out
-- [ ] Streaming response support (SSE)
-- [ ] Frontend UI (React + Tailwind)
-- [ ] PDF / document ingestion pipeline
-- [ ] Query history and session memory
-- [ ] Docker + deployment setup
-
----
+- Move orchestration from `main.py` into `graph/research_graph.py`.
+- Add run state models under `state/`.
+- Add persistence for runs, tasks, sources, findings, critiques, and reports.
+- Add API endpoints for starting research and checking status.
+- Add streaming progress events.
+- Add retries, timeouts, cancellation, and rate-limit handling.
+- Add source cache and duplicate-source handling across runs.
+- Add optional vector retrieval over uploaded/local documents.
+- Add report export formats such as PDF and HTML.
+- Add cost, token, and latency tracking.
 
 ## License
 
