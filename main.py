@@ -1,20 +1,22 @@
 from tqdm import tqdm
 
 from agents import create_plan, ResearchAgent
+from config import config
 from tools import RetrievalService, get_search_provider, get_scraper
+
+output_file = config.BASE_PATH / "output" / "research_plan.txt"
 
 
 def main():
 
     query = (
-        "Research Apache Kafka architecture, "
-        "workflow, scalability, and comparison "
-        "with RabbitMQ."
+        "Tell me which coffee beans should we use to make best cold"
+        "coffee. I live in India."
     )
 
     print("\nCreating research plan...\n")
 
-    tasks = create_plan(query)
+    tasks = create_plan(query).tasks
 
     print(f"Generated {len(tasks)} tasks:\n")
 
@@ -61,7 +63,7 @@ def main():
         print(f"\nTask {idx}")
         print("-" * 100)
 
-        print(result.model_dump_json(indent=2))
+        print(result)
 
     return results
 
