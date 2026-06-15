@@ -1,3 +1,6 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import cast
+
 from tqdm import tqdm
 
 from agents import create_plan, ResearchAgent
@@ -5,6 +8,8 @@ from config import config
 from tools import RetrievalService, get_search_provider, get_scraper
 
 output_file = config.BASE_PATH / "output" / "research_plan.txt"
+
+MAX_TASKS = 2
 
 
 def main():
@@ -17,6 +22,8 @@ def main():
     print("\nCreating research plan...\n")
 
     tasks = create_plan(query).tasks
+    if MAX_TASKS is not None:
+        tasks = tasks[:MAX_TASKS]
 
     print(f"Generated {len(tasks)} tasks:\n")
 
@@ -41,32 +48,39 @@ def main():
         desc="Research Progress",
         unit="task",
     ) as progress:
+        max_workers = max(1, min(4, len(tasks)))
+        results_by_index = [None] * len(tasks)
 
-        for task in tasks:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_index = {
+                executor.submit(research_agent.execute, task): index
+                for index, task in enumerate(tasks)
+            }
 
-            progress.set_postfix(current_task=task[:50])
+            for future in as_completed(future_to_index):
+                index = future_to_index[future]
+                current_task = tasks[index]
+                progress.set_postfix(current_task=current_task[:50])
 
-            result = research_agent.execute(task)
+                try:
+                    results_by_index[index] = future.result()
+                except Exception as error:
+                    progress.set_postfix(current_task=f"{current_task[:50]} (failed)")
+                    print(f"\nTask {index + 1} failed: {error}")
+                finally:
+                    progress.update(1)
 
-            results.append(result)
+        results = [
+            cast(dict, cast(object, result))["structured_response"]
+            for result in results_by_index
+            if result is not None
+        ]
 
-            progress.update(1)
-
-    print("\nResearch completed.\n")
-
-    print("=" * 100)
-    print("RESEARCH RESULTS")
-    print("=" * 100)
-
-    for idx, result in enumerate(results, start=1):
-
-        print(f"\nTask {idx}")
-        print("-" * 100)
-
-        print(result)
+        # return results
 
     return results
 
 
 if __name__ == "__main__":
-    main()
+    response = main()
+    print(response[0])
