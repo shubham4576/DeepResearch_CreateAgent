@@ -1,5 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from tqdm.auto import tqdm
+
 from schemas import ResearchResponse, ResearchTask
 
 from .research import ResearchAgent
@@ -10,7 +12,11 @@ class TaskDistributionAgent:
         self.research_agent = research_agent
         self.max_workers = max_workers
 
-    def execute(self, tasks: list[ResearchTask]) -> list[ResearchResponse]:
+    def execute(
+        self,
+        tasks: list[ResearchTask],
+        description: str = "Research tasks",
+    ) -> list[ResearchResponse]:
         if not tasks:
             return []
 
@@ -23,7 +29,13 @@ class TaskDistributionAgent:
                 for index, task in enumerate(tasks)
             }
 
-            for future in as_completed(future_to_index):
+            completed_futures = tqdm(
+                as_completed(future_to_index),
+                total=len(future_to_index),
+                desc=description,
+            )
+
+            for future in completed_futures:
                 index = future_to_index[future]
                 task = tasks[index]
 

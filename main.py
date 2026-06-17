@@ -11,6 +11,7 @@ from agents import (
 from config import config
 from schemas import RefinementResponse, ReportResponse, ResearchTask
 from tools import RetrievalService, get_scraper, get_search_provider
+from tqdm.auto import tqdm
 
 MAX_TASKS = 2
 MAX_RESEARCH_WORKERS = 4
@@ -50,13 +51,17 @@ def run_research_pipeline(query: str) -> RefinementResponse:
     )
 
     print("\nStarting parallel research...\n")
-    research_results = distributor.execute(tasks)
+    research_results = distributor.execute(tasks, description="Initial research")
 
     print("\nReflecting on research quality...\n")
     reflection_agent = ReflectionAgent()
     reflections = [
         reflection_agent.execute(task=task, research_result=result)
-        for task, result in zip(tasks, research_results, strict=False)
+        for task, result in tqdm(
+            zip(tasks, research_results, strict=False),
+            total=min(len(tasks), len(research_results)),
+            desc="Reflection",
+        )
     ]
 
     follow_up_tasks = [
@@ -68,12 +73,19 @@ def run_research_pipeline(query: str) -> RefinementResponse:
 
     if follow_up_tasks:
         print(f"\nRunning {len(follow_up_tasks)} follow-up research tasks...\n")
-        follow_up_results = distributor.execute(follow_up_tasks)
+        follow_up_results = distributor.execute(
+            follow_up_tasks,
+            description="Follow-up research",
+        )
         research_results.extend(follow_up_results)
 
         reflections.extend(
             reflection_agent.execute(task=task, research_result=result)
-            for task, result in zip(follow_up_tasks, follow_up_results, strict=False)
+            for task, result in tqdm(
+                zip(follow_up_tasks, follow_up_results, strict=False),
+                total=min(len(follow_up_tasks), len(follow_up_results)),
+                desc="Follow-up reflection",
+            )
         )
 
     print("\nSynthesizing evidence...\n")

@@ -1,10 +1,14 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import logging
 from urllib.parse import urlparse
 from uuid import uuid5, NAMESPACE_URL
+
+from tqdm.auto import tqdm
 
 from schemas import SearchResult, SourceDocument
 from tools.scrape import BaseScraper
 from tools.search import BaseSearchProvider
+
+logger = logging.getLogger(__name__)
 
 
 class RetrievalService:
@@ -33,7 +37,8 @@ class RetrievalService:
                 content_length=len(scraped.content),
                 fetched_at=scraped.fetched_at,
             )
-        except Exception:
+        except (ValueError, TimeoutError, ConnectionError, OSError) as error:
+            logger.warning("Failed to scrape %s: %s", result.url, error)
             return None
 
     def retrieve(self, query: str, max_results=10) -> list[SourceDocument]:
@@ -41,20 +46,14 @@ class RetrievalService:
 
         documents: list[SourceDocument] = []
 
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        for result in tqdm(
+            search_results,
+            desc=f"Scraping: {query[:40]}",
+            leave=False,
+        ):
+            document = self._scrape_document(result)
 
-            futures = [
-                executor.submit(
-                    self._scrape_document,
-                    result,
-                )
-                for result in search_results
-            ]
-
-            for future in as_completed(futures):
-                document = future.result()
-
-                if document:
-                    documents.append(document)
+            if document:
+                documents.append(document)
 
         return documents
