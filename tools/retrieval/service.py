@@ -41,8 +41,14 @@ class RetrievalService:
             logger.warning("Failed to scrape %s: %s", result.url, error)
             return None
 
+    def search(self, query: str, max_results=10) -> list[SearchResult]:
+        return self.search_provider.search(query, max_results)
+
+    def scrape(self, result: SearchResult) -> SourceDocument | None:
+        return self._scrape_document(result)
+
     def retrieve(self, query: str, max_results=10) -> list[SourceDocument]:
-        search_results = self.search_provider.search(query, max_results)
+        search_results = self.search(query, max_results)
 
         documents: list[SourceDocument] = []
 
@@ -51,7 +57,7 @@ class RetrievalService:
             desc=f"Scraping: {query[:40]}",
             leave=False,
         ):
-            document = self._scrape_document(result)
+            document = self.scrape(result)
 
             if document:
                 documents.append(document)

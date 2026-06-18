@@ -1,3 +1,5 @@
+from tqdm.auto import tqdm
+
 from agents import (
     CritiqueAgent,
     ReflectionAgent,
@@ -11,9 +13,8 @@ from agents import (
 from config import config
 from schemas import RefinementResponse, ReportResponse, ResearchTask
 from tools import RetrievalService, get_scraper, get_search_provider
-from tqdm.auto import tqdm
 
-MAX_TASKS = 2
+MAX_TASKS = None
 MAX_RESEARCH_WORKERS = 4
 
 
@@ -123,14 +124,11 @@ def run_research_pipeline(query: str) -> RefinementResponse:
 
 
 def main() -> ReportResponse:
-    query = (
-        "Tell me which coffee beans should we use to make best cold "
-        "coffee. I live in India."
-    )
+    query = "What is mandala art ?"
 
     refinement = run_research_pipeline(query)
 
-    output_file = config.BASE_PATH / "output" / "research_report.txt"
+    output_file = config.BASE_PATH / "output" / "research_report.md"
     output_file.parent.mkdir(parents=True, exist_ok=True)
     output_file.write_text(refinement.final_report.markdown, encoding="utf-8")
 

@@ -12,6 +12,9 @@ class TrafilaturaScraper(BaseScraper):
             url=url,
         )
 
+        if not downloaded:
+            raise ConnectionError(f"Failed to fetch URL: {url}")
+
         content = trafilatura.extract(downloaded)
 
         if content is None:

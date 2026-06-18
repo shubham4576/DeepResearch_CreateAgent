@@ -1,13 +1,24 @@
 .
 ├── agents
+│   ├── critique.py
+│   ├── distributor.py
 │   ├── __init__.py
 │   ├── planner.py
+│   ├── refinement.py
 │   ├── reflection.py
-│   └── research.py
+│   ├── report.py
+│   ├── research.py
+│   └── synthesis.py
 ├── api
 │   └── __init__.py
 ├── config.py
+├── CONTRIBUTING.md
 ├── .env
+├── .github
+│   ├── ISSUE_TEMPLATE
+│   │   ├── bug_report.md
+│   │   └── feature_request.md
+│   └── pull_request_template.md
 ├── .gitignore
 ├── graph
 │   └── __init__.py
@@ -29,24 +40,28 @@
 ├── memory
 │   └── __init__.py
 ├── output
-│   └── __init__.py
+│   ├── __init__.py
+│   └── research_report.md
 ├── project_tree.txt
 ├── prompts
+│   ├── critique
+│   │   └── current.md
 │   ├── __init__.py
 │   ├── loader.py
 │   ├── planner
 │   │   └── current.md
-│   └── research
+│   ├── refinement
+│   │   └── current.md
+│   ├── reflection
+│   │   └── current.md
+│   ├── report
+│   │   └── current.md
+│   ├── research
+│   │   ├── current.md
+│   │   └── v1.md
+│   └── synthesis
 │       └── current.md
 ├── pyproject.toml
-├── .pytest_cache
-│   ├── CACHEDIR.TAG
-│   ├── .gitignore
-│   ├── README.md
-│   └── v
-│       └── cache
-│           ├── lastfailed
-│           └── nodeids
 ├── README.md
 ├── schemas
 │   ├── agent_modals.py
@@ -55,7 +70,10 @@
 ├── state
 │   └── __init__.py
 ├── tests
+│   ├── __init__.py
+│   ├── test_general_web_scraper.py
 │   └── test_retrieval.py
+├── test.txt
 ├── tools
 │   ├── __init__.py
 │   ├── retrieval
@@ -63,7 +81,9 @@
 │   │   └── service.py
 │   ├── scrape
 │   │   ├── base.py
+│   │   ├── general_web_scrapper.py
 │   │   ├── __init__.py
+│   │   ├── newspaper4k_scrapper.py
 │   │   └── trafilatura_scrapper.py
 │   └── search
 │       ├── base.py
@@ -71,4 +91,4 @@
 │       └── __init__.py
 └── uv.lock
 
-22 directories, 50 files
+26 directories, 66 files

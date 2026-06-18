@@ -13,6 +13,7 @@ dependencies = [
     "langgraph>=1.2.4",
     "pydantic-settings>=2.14.1",
     "pytest>=9.0.3",
+    "newspaper4k>=0.9.3",
     "python-dotenv>=1.2.2",
     "tqdm>=4.68.1",
     "trafilatura>=2.1.0",
