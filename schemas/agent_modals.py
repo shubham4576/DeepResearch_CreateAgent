@@ -48,6 +48,30 @@ class Plan(BaseModel):
     )
 
 
+class ClarificationDecision(BaseModel):
+    needs_clarification: bool = Field(
+        description="Whether the query is too ambiguous to plan safely."
+    )
+    reason: str = Field(description="Short reason for the decision.")
+    questions: list[str] = Field(
+        default_factory=list,
+        max_length=3,
+        description="One to three clarification questions for the user.",
+    )
+    assumed_query: str | None = Field(
+        default=None,
+        description=(
+            "A concrete query to use if the query is clear enough or the user "
+            "chooses to continue with assumptions."
+        ),
+    )
+
+
+class ClarificationResponse(BaseModel):
+    clarified_query: str
+    assumptions: list[str] = Field(default_factory=list)
+
+
 class Citation(BaseModel):
     source_id: str
     url: str

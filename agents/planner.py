@@ -6,7 +6,7 @@ from llms import make_llm
 from prompts import load_prompt
 from schemas import Plan, ResearchTask, TaskStatus
 
-planner_llm = make_llm(reasoning={"effort": "xhigh"})
+planner_llm = make_llm(reasoning={"effort": "low"})
 
 
 def _normalize_plan(plan: Plan) -> Plan:

@@ -124,7 +124,7 @@ def run_research_pipeline(query: str) -> RefinementResponse:
 
 
 def main() -> ReportResponse:
-    query = "What is mandala art ?"
+    query = "What is mandala art?"
 
     refinement = run_research_pipeline(query)
 

@@ -4,6 +4,8 @@ from .retrieval_modals import *
 
 __all__ = [
     "Citation",
+    "ClarificationDecision",
+    "ClarificationResponse",
     "ClaimRecord",
     "ConversationThread",
     "CritiqueResponse",

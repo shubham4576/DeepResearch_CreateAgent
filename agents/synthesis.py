@@ -9,7 +9,7 @@ from schemas import ReflectionResponse, ResearchResponse, SynthesisResponse
 
 class SynthesisAgent:
     def __init__(self):
-        self.llm = make_llm(reasoning={"effort": "high"})
+        self.llm = make_llm(reasoning={"effort": "low"})
 
     def execute(
         self,

@@ -32,7 +32,7 @@ class Config(BaseSettings):
     OPENAI_DEFAULT_MODEL: str
 
     SEARCH_PROVIDER: SearchProvider = SearchProvider.DUCKDUCKGO
-    SCRAPER_PROVIDER: ScraperProvider = ScraperProvider.GENERAL_WEB
+    SCRAPER_PROVIDER: ScraperProvider = ScraperProvider.FIRECRAWL
 
     SEARCH_MAX_RESULTS: int = 10
 
@@ -46,13 +46,18 @@ class Config(BaseSettings):
 
     # FIRECRAWL SCRAPPER DETAILS (PAID SERVICE) USING FREE TIER
     FIRECRAWL_API_KEY: SecretStr | None = None
-    FIRECRAWL_ENABLED: bool = False
+    FIRECRAWL_ENABLED: bool = True
+    FIRECRAWL_DISABLE_BUDGET_CHECK: bool = True
     FIRECRAWL_MAX_PAGES_PER_RUN: int = 20
     FIRECRAWL_MAX_CREDITS_PER_RUN: int = 50
 
     # CONTEXT CONTROL
     CONTEXT_MAX_CHARS_PER_SOURCE: int = 4000
     CONTEXT_MAX_SOURCES: int = 8
+
+    # DEBUGGING
+    DEBUG_RESEARCH_CONTEXT: bool = True
+    DEBUG_OUTPUT_PATH: Path = BASE_PATH / "output" / "debug"
 
 
 @lru_cache

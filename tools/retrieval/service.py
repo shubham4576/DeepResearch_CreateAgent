@@ -37,7 +37,7 @@ class RetrievalService:
                 content_length=len(scraped.content),
                 fetched_at=scraped.fetched_at,
             )
-        except (ValueError, TimeoutError, ConnectionError, OSError) as error:
+        except (ValueError, TimeoutError, ConnectionError, OSError, RuntimeError) as error:
             logger.warning("Failed to scrape %s: %s", result.url, error)
             return None
 

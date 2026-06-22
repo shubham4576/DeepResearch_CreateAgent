@@ -2,6 +2,7 @@ from typing import cast
 
 from langchain.agents import create_agent
 
+from config import config
 from llms import make_llm
 from prompts import load_prompt
 from schemas import Citation, ResearchResponse, ResearchTask, SourceDocument
@@ -42,6 +43,30 @@ def _format_documents(
     return "\n\n---\n\n".join(sections)
 
 
+def _research_user_payload(task: ResearchTask, documents_text: str) -> str:
+    return f"""
+                                Task ID:
+                                {task.id}
+
+                                Research Question:
+                                {task.question}
+
+                                Objective:
+                                {task.objective}
+
+                                Expected Output:
+                                {task.expected_output}
+
+                                Sources:
+                                {documents_text}
+                                """
+
+
+def _safe_debug_filename(task_id: str) -> str:
+    safe = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in task_id)
+    return f"research_context_{safe or 'task'}.md"
+
+
 class ResearchAgent:
 
     def __init__(
@@ -50,7 +75,7 @@ class ResearchAgent:
     ):
         self.retrieval_service = retrieval_service
 
-        self.llm = make_llm(reasoning={"effort": "high"})
+        self.llm = make_llm(reasoning={"effort": "low"})
 
     def _retrieve_documents(self, task: ResearchTask) -> list[SourceDocument]:
         queries = task.search_queries or [task.question]
@@ -83,28 +108,20 @@ class ResearchAgent:
         )
 
         documents_text = _format_documents(documents)
+        user_payload = _research_user_payload(task, documents_text)
+        self._write_debug_context(
+            task=task,
+            documents=documents,
+            system_prompt=system_prompt,
+            user_payload=user_payload,
+        )
 
         response = research_agent.invoke(
             {
                 "messages": [
                     (
                         "user",
-                        f"""
-                                Task ID:
-                                {task.id}
-
-                                Research Question:
-                                {task.question}
-
-                                Objective:
-                                {task.objective}
-
-                                Expected Output:
-                                {task.expected_output}
-
-                                Sources:
-                                {documents_text}
-                                """,
+                        user_payload,
                     )
                 ]
             }
@@ -125,3 +142,46 @@ class ResearchAgent:
             ]
 
         return research_response
+
+    def _write_debug_context(
+        self,
+        *,
+        task: ResearchTask,
+        documents: list[SourceDocument],
+        system_prompt: str,
+        user_payload: str,
+    ) -> None:
+        if not config.DEBUG_RESEARCH_CONTEXT:
+            return
+
+        config.DEBUG_OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
+        output_file = config.DEBUG_OUTPUT_PATH / _safe_debug_filename(task.id)
+        source_summary = "\n".join(
+            f"- {document.title} | {document.url} | {document.content_length} chars"
+            for document in documents
+        )
+        output_file.write_text(
+            "\n".join(
+                [
+                    f"# Research Context Debug: {task.id}",
+                    "",
+                    "## Source Summary",
+                    "",
+                    source_summary or "No source documents retrieved.",
+                    "",
+                    "## System Prompt",
+                    "",
+                    "```text",
+                    system_prompt,
+                    "```",
+                    "",
+                    "## User Payload Sent To Research Agent",
+                    "",
+                    "```text",
+                    user_payload,
+                    "```",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )

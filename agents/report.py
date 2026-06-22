@@ -9,7 +9,7 @@ from schemas import ReportResponse, SynthesisResponse
 
 class ReportGenerationAgent:
     def __init__(self):
-        self.llm = make_llm(reasoning={"effort": "high"})
+        self.llm = make_llm(reasoning={"effort": "low"})
 
     def execute(self, query: str, synthesis: SynthesisResponse) -> ReportResponse:
         report_agent = create_agent(

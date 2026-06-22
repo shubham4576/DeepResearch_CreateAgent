@@ -16,11 +16,17 @@ class FirecrawlScraper(BaseScraper):
         self,
         api_key: str | None = None,
         enabled: bool | None = None,
+        disable_budget_check: bool | None = None,
         budget: FirecrawlBudget | None = None,
     ):
         secret = config.FIRECRAWL_API_KEY
         self.api_key = api_key or (secret.get_secret_value() if secret else None)
         self.enabled = config.FIRECRAWL_ENABLED if enabled is None else enabled
+        self.disable_budget_check = (
+            config.FIRECRAWL_DISABLE_BUDGET_CHECK
+            if disable_budget_check is None
+            else disable_budget_check
+        )
         self.budget = budget or FirecrawlBudget(
             max_pages=config.FIRECRAWL_MAX_PAGES_PER_RUN,
             max_credits=config.FIRECRAWL_MAX_CREDITS_PER_RUN,
@@ -33,7 +39,6 @@ class FirecrawlScraper(BaseScraper):
         if not self.api_key:
             raise RuntimeError("FIRECRAWL_API_KEY is required for Firecrawl scraping.")
 
-        self.budget.ensure_available(estimated_credits=1)
         payload = {
             "url": url,
             "formats": ["markdown"],
@@ -42,9 +47,15 @@ class FirecrawlScraper(BaseScraper):
             "blockAds": True,
             "timeout": 60000,
         }
-        response = self._post_scrape(payload)
-        markdown = self._extract_markdown(response, url)
-        self.budget.record_usage(estimated_credits=1)
+        if not self.disable_budget_check:
+            self.budget.reserve_usage(estimated_credits=1)
+        try:
+            response = self._post_scrape(payload)
+            markdown = self._extract_markdown(response, url)
+        except Exception:
+            if not self.disable_budget_check:
+                self.budget.refund_usage(estimated_credits=1)
+            raise
 
         return ScrapedContent(
             url=url,

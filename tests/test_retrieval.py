@@ -27,6 +27,33 @@ class FakeScraper(BaseScraper):
         )
 
 
+class MultiResultSearchProvider(BaseSearchProvider):
+    def search(self, query: str, max_results: int) -> list[SearchResult]:
+        return [
+            SearchResult(
+                title="Good Source",
+                url="https://example.com/good",
+                snippet="Good source.",
+                rank=1,
+                provider="fake",
+            ),
+            SearchResult(
+                title="Budget Exceeded",
+                url="https://example.com/budget",
+                snippet="Budget issue.",
+                rank=2,
+                provider="fake",
+            ),
+        ]
+
+
+class RuntimeFailingSecondScraper(BaseScraper):
+    def scrape(self, url: str) -> ScrapedContent:
+        if url.endswith("/budget"):
+            raise RuntimeError("Firecrawl page budget exceeded")
+        return ScrapedContent(url=url, content="Useful scraped content.")
+
+
 def test_retrieval_preserves_source_metadata():
     service = RetrievalService(
         search_provider=FakeSearchProvider(),
@@ -84,3 +111,15 @@ def test_retrieval_tools_store_sources_and_tool_calls():
     tool_calls = memory_store.list_tool_calls("run_1")
     assert len(tool_calls) == 1
     assert tool_calls[0].tool_name == "retrieve_web"
+
+
+def test_retrieval_keeps_partial_documents_when_scraper_budget_is_exceeded():
+    service = RetrievalService(
+        search_provider=MultiResultSearchProvider(),
+        scraper=RuntimeFailingSecondScraper(),
+    )
+
+    documents = service.retrieve("test query", max_results=2)
+
+    assert len(documents) == 1
+    assert documents[0].url == "https://example.com/good"
