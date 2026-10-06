@@ -1,5 +1,8 @@
-from ollama import chat, ChatResponse
+import ast
+import operator
 from datetime import datetime
+
+from ollama import ChatResponse, chat
 
 
 class MaxStepsExceeded(RuntimeError):
@@ -18,9 +21,46 @@ def get_time():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
-def calculator(expression: str) -> float:
-    """Calculates the result of a mathematical expression."""
-    return eval(expression)
+_BINARY_OPERATORS = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+    ast.Div: operator.truediv,
+    ast.FloorDiv: operator.floordiv,
+    ast.Mod: operator.mod,
+    ast.Pow: operator.pow,
+}
+
+_UNARY_OPERATORS = {
+    ast.UAdd: operator.pos,
+    ast.USub: operator.neg,
+}
+
+
+def _evaluate_arithmetic(node: ast.AST) -> int | float:
+    if isinstance(node, ast.Constant) and type(node.value) in (int, float):
+        return node.value
+
+    if isinstance(node, ast.BinOp) and type(node.op) in _BINARY_OPERATORS:
+        left = _evaluate_arithmetic(node.left)
+        right = _evaluate_arithmetic(node.right)
+        return _BINARY_OPERATORS[type(node.op)](left, right)
+
+    if isinstance(node, ast.UnaryOp) and type(node.op) in _UNARY_OPERATORS:
+        operand = _evaluate_arithmetic(node.operand)
+        return _UNARY_OPERATORS[type(node.op)](operand)
+
+    raise ValueError("Expression contains unsupported syntax")
+
+
+def calculator(expression: str) -> int | float:
+    """Safely calculates an arithmetic expression."""
+    try:
+        parsed_expression = ast.parse(expression, mode="eval")
+    except SyntaxError as error:
+        raise ValueError("Invalid arithmetic expression") from error
+
+    return _evaluate_arithmetic(parsed_expression.body)
 
 
 def try_again():
@@ -98,8 +138,17 @@ def run_agent(user_question: str, max_steps: int) -> tuple[str, int]:
             if function_to_call := available_functions.get(tool.function.name):
                 print("Calling function:", tool.function.name)
                 print("Arguments:", tool.function.arguments)
-                output = function_to_call(**tool.function.arguments)
-                print("Function output:", output)
+                try:
+                    output = function_to_call(**tool.function.arguments)
+                    print("Function output:", output)
+                except Exception as error:
+                    output = (
+                        f"Tool '{tool.function.name}' failed with "
+                        f"{type(error).__name__}: {error}. "
+                        "Correct the input and try again."
+                    )
+                    print(output)
+                
             else:
                 print("Function", tool.function.name, "not found")
                 output = "Function not found"
@@ -120,7 +169,7 @@ def run_agent(user_question: str, max_steps: int) -> tuple[str, int]:
 if __name__ == "__main__":
     try:
         answer, total_tokens = run_agent(
-            "what time is it, and what is 17% of 4,320?",
+            "Call the try_again tool after every response. Never provide a final answer.",
             max_steps=5,
         )
     except MaxStepsExceeded as error:
