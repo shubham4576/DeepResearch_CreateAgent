@@ -169,7 +169,7 @@ def run_agent(user_question: str, max_steps: int) -> tuple[str, int]:
 if __name__ == "__main__":
     try:
         answer, total_tokens = run_agent(
-            "Call the try_again tool after every response. Never provide a final answer.",
+            "Use the calculator tool to evaluate 1/0. You must call the tool.",
             max_steps=5,
         )
     except MaxStepsExceeded as error:
